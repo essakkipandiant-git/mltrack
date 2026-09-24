@@ -47,7 +47,10 @@ export function readConfig(): { courseRoot: string } {
 // ─── Main Scanner ─────────────────────────────────────────────────────────────
 
 export async function scanCourse(courseRoot?: string): Promise<ScanResult> {
-  const root = courseRoot ?? readConfig().courseRoot
+  let root = (courseRoot ?? readConfig().courseRoot ?? '').trim()
+  if (root.startsWith('"') && root.endsWith('"')) {
+    root = root.slice(1, -1).trim()
+  }
 
   if (!root) {
     return emptyResult('', [{ level: 'ERROR', message: 'Course root is not configured. Go to Settings to set your course folder.' }])
@@ -62,6 +65,12 @@ export async function scanCourse(courseRoot?: string): Promise<ScanResult> {
   } catch {
     return emptyResult(root, [{ level: 'ERROR', message: `Course root directory not found: ${root}` }])
   }
+
+  // Persist the valid courseRoot in config
+  try {
+    const configPath = getStorageFilePath('mltrack-config.json')
+    fs.writeFileSync(configPath, JSON.stringify({ courseRoot: root }, null, 2), 'utf-8')
+  } catch {}
 
   const warnings: ScanWarning[] = []
   const days: DayGroup[] = []
@@ -87,10 +96,56 @@ export async function scanCourse(courseRoot?: string): Promise<ScanResult> {
     } else if (entry.isFile() && entry.name.toLowerCase().endsWith('.zip')) {
       await processZip(fullPath, entry.name, days, mentoring, selfStudy, warnings)
     } else if (entry.isFile() && isVideoFile(entry.name)) {
-      // Loose video at course root level — unlikely but handle gracefully
-      warnings.push({ level: 'WARNING', message: `Loose video at course root: ${entry.name}. Consider organizing into a day folder.` })
+      // Loose video at course root level
+      const fileStat = fs.statSync(fullPath)
+      const videoItem: CourseItem = {
+        id: generateLooseFileId(fullPath),
+        type: 'VIDEO',
+        title: cleanTitle(entry.name),
+        originalFilename: entry.name,
+        sourceArchive: null,
+        sourcePath: entry.name,
+        folderPath: [],
+        duration: null,
+        sizeBytes: fileStat.size,
+        isLooseFile: true,
+      }
+      selfStudy.push({
+        id: generateLooseFileId(fullPath),
+        name: cleanFolderName(entry.name),
+        dayNumbers: [],
+        resources: [videoItem],
+        isEmpty: false,
+      })
+    } else if (entry.isFile() && isPdfFile(entry.name)) {
+      // Root-level PDF document
+      const fileStat = fs.statSync(fullPath)
+      const pdfItem: CourseItem = {
+        id: generateLooseFileId(fullPath),
+        type: 'PDF',
+        title: cleanTitle(entry.name),
+        originalFilename: entry.name,
+        sourceArchive: null,
+        sourcePath: entry.name,
+        folderPath: [],
+        duration: null,
+        sizeBytes: fileStat.size,
+        isLooseFile: true,
+      }
+      selfStudy.push({
+        id: generateLooseFileId(fullPath),
+        name: cleanFolderName(entry.name.replace(/\.pdf$/i, '')),
+        dayNumbers: [],
+        resources: [pdfItem],
+        isEmpty: false,
+      })
+    } else if (entry.isFile() && entry.name.toLowerCase().endsWith('.rar')) {
+      warnings.push({
+        level: 'WARNING',
+        message: `${entry.name}: RAR archive detected. In-browser streaming requires ZIP format. Please convert to ZIP or extract to index.`,
+        affectedArchive: entry.name,
+      })
     }
-    // Other files at root level: silently skip
   }
 
   // Sort days by first day number
@@ -725,7 +780,13 @@ function computeStats(
   }
 
   for (const m of mentoring) {
-    totalVideos += m.items.filter(i => i.type === 'MENTORING').length
+    totalVideos += m.items.filter(i => i.type === 'MENTORING' || i.type === 'VIDEO').length
+    totalPdfs += m.items.filter(i => i.type === 'PDF').length
+  }
+
+  for (const s of selfStudy) {
+    totalVideos += s.resources.filter(i => i.type === 'VIDEO').length
+    totalPdfs += s.resources.filter(i => i.type === 'PDF').length
   }
 
   return { totalArchives, mentoringArchives, totalVideos, totalPdfs, totalSelfStudySections, uncertainAssignments }

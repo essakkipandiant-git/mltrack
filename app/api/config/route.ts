@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'courseRoot must be a string' }, { status: 400 })
     }
 
-    const courseRoot = body.courseRoot.trim()
+    const courseRoot = body.courseRoot.trim().replace(/^["']|["']$/g, '')
 
     // Validate the path exists if non-empty
     if (courseRoot) {

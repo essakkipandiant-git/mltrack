@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Upload, FolderOpen, AlertCircle, Check, ChevronDown } from 'lucide-react'
 import { Badge } from './shared'
 import { saveCourseCache } from '@/lib/storage/courseCache'
@@ -20,27 +20,33 @@ export function ImportPage({ onImported }: { onImported: () => void }) {
   // Manual assignments for uncertain items: itemId → dayNumber | null
   const [manualAssignments, setManualAssignments] = useState<Record<string, number | null>>({})
 
-  // Load current config
-  useState(() => {
+  // Load current config on mount
+  useEffect(() => {
     fetch('/api/config')
       .then(r => r.json())
-      .then((d: { courseRoot: string }) => setCourseRoot(d.courseRoot ?? ''))
+      .then((d: { courseRoot?: string }) => {
+        if (d?.courseRoot) {
+          setCourseRoot(d.courseRoot)
+        }
+      })
       .catch(() => {})
-  })
+  }, [])
 
   const handleSavePath = async () => {
+    const cleanPath = courseRoot.trim().replace(/^["']|["']$/g, '')
     setSaving(true)
     setSaveMsg(null)
     try {
       const res = await fetch('/api/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ courseRoot }),
+        body: JSON.stringify({ courseRoot: cleanPath }),
       })
       const data = await res.json() as { ok?: boolean; error?: string }
       if (!res.ok || data.error) {
         setSaveMsg(`Error: ${data.error}`)
       } else {
+        setCourseRoot(cleanPath)
         setSaveMsg('Path saved ✓')
       }
     } catch (e) {
@@ -51,11 +57,25 @@ export function ImportPage({ onImported }: { onImported: () => void }) {
   }
 
   const handleScan = async () => {
+    const cleanPath = courseRoot.trim().replace(/^["']|["']$/g, '')
     setScanning(true)
     setScanError(null)
     setScanResult(null)
     try {
-      const res = await fetch('/api/scanner/scan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) })
+      // Auto-save path if entered so user doesn't have to click 'Save Path' first
+      if (cleanPath) {
+        fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ courseRoot: cleanPath }),
+        }).catch(() => {})
+      }
+
+      const res = await fetch('/api/scanner/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ courseRoot: cleanPath }),
+      })
       const data = await res.json() as ScanResult & { error?: string }
       if (!res.ok || data.error) {
         setScanError(data.error ?? 'Scan failed')

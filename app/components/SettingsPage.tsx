@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useSettings } from '@/hooks/useSettings'
 import { clearHistory } from '@/lib/storage/history'
 import { clearAllProgress } from '@/lib/storage/progress'
@@ -14,19 +14,25 @@ export function SettingsPage({ onCourseReset }: { onCourseReset: () => void }) {
   const [pathMsg, setPathMsg] = useState<string | null>(null)
   const [confirmClear, setConfirmClear] = useState<'history' | 'progress' | 'cache' | 'all' | null>(null)
 
-  // Load current path
-  useState(() => {
-    fetch('/api/config').then(r => r.json()).then((d: { courseRoot: string }) => setCourseRoot(d.courseRoot ?? '')).catch(() => {})
-  })
+  // Load current path on mount
+  useEffect(() => {
+    fetch('/api/config')
+      .then(r => r.json())
+      .then((d: { courseRoot?: string }) => {
+        if (d?.courseRoot) setCourseRoot(d.courseRoot)
+      })
+      .catch(() => {})
+  }, [])
 
   const savePath = async () => {
+    const cleanPath = courseRoot.trim().replace(/^["']|["']$/g, '')
     setSavingPath(true)
     setPathMsg(null)
     try {
       const res = await fetch('/api/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ courseRoot }),
+        body: JSON.stringify({ courseRoot: cleanPath }),
       })
       const d = await res.json() as { ok?: boolean; error?: string }
       setPathMsg(d.error ? `Error: ${d.error}` : 'Saved ✓')
