@@ -1,0 +1,70 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --font-sans: 'Geist', 'Geist Fallback';
+  --font-mono: 'Geist Mono', 'Geist Mono Fallback';
+  --radius-lg: 0.75rem;
+  --radius-md: 0.55rem;
+  --radius-sm: 0.4rem;
+}
+
+:root {
+  color-scheme: dark;
+  --background: oklch(0.13 0.018 235);
+  --foreground: oklch(0.94 0.015 220);
+  --card: oklch(0.17 0.022 235);
+  --card-foreground: oklch(0.94 0.015 220);
+  --popover: oklch(0.18 0.025 235);
+  --popover-foreground: oklch(0.94 0.015 220);
+  --primary: oklch(0.82 0.15 195);
+  --primary-foreground: oklch(0.14 0.025 230);
+  --secondary: oklch(0.22 0.025 235);
+  --secondary-foreground: oklch(0.88 0.02 220);
+  --muted: oklch(0.21 0.022 235);
+  --muted-foreground: oklch(0.61 0.035 220);
+  --accent: oklch(0.25 0.04 220);
+  --accent-foreground: oklch(0.92 0.02 220);
+  --destructive: oklch(0.65 0.18 25);
+  --border: oklch(0.29 0.03 230);
+  --input: oklch(0.25 0.03 230);
+  --ring: oklch(0.82 0.15 195);
+}
+
+* { @apply border-border outline-ring/50; }
+html { background: var(--background); }
+body { @apply bg-background text-foreground font-sans antialiased; }
+button, a { -webkit-tap-highlight-color: transparent; }
+::selection { background: oklch(0.82 0.15 195 / 0.25); }
+
+video::cue {
+  background-color: rgba(0, 0, 0, 0.8) !important;
+  color: #ffffff !important;
+  font-family: inherit !important;
+  font-size: 1.15rem !important;
+  line-height: 1.4 !important;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9) !important;
+  border-radius: 6px !important;
+  padding: 4px 8px !important;
+}
