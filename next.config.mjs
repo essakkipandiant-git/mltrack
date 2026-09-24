@@ -3,13 +3,10 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   images: {
     unoptimized: true,
   },
-  serverExternalPackages: ['yauzl', '@ffprobe-installer/ffprobe', 'telegram'],
+  serverExternalPackages: ['yauzl', '@ffprobe-installer/ffprobe'],
 }
 
 export default nextConfig
