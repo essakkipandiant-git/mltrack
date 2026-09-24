@@ -14,8 +14,9 @@ node_modules/
 .env.production
 .env.development
 
-# MLTrack local databases, session keys, and cache files
-mltrack-*.json
+# MLTrack private session keys & user Telegram data
+mltrack-telegram.json
+mltrack-telegram-index.json
 .cache/
 
 # Vercel and tool artifacts

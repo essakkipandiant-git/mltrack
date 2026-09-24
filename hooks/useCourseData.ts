@@ -29,7 +29,24 @@ export function useCourseData(): CourseData {
       setIsLoading(true)
       setError(null)
       try {
-        const cached = await getCachedCourse()
+        let cached = await getCachedCourse()
+
+        // Fallback to server-side course cache if IndexedDB is not yet populated
+        if (!cached) {
+          try {
+            const res = await fetch('/api/course')
+            if (res.ok) {
+              const data = await res.json() as { course?: ScanResult }
+              if (data?.course && (data.course.days?.length > 0 || data.course.mentoring?.length > 0)) {
+                cached = data.course
+                await saveCourseCache(cached)
+              }
+            }
+          } catch (fetchErr) {
+            console.warn('[useCourseData] Could not fetch server course:', fetchErr)
+          }
+        }
+
         if (!cancelled && cached) {
           // Apply manual assignments
           const assignments = await getManualAssignments()

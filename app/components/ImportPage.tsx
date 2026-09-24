@@ -20,13 +20,22 @@ export function ImportPage({ onImported }: { onImported: () => void }) {
   // Manual assignments for uncertain items: itemId → dayNumber | null
   const [manualAssignments, setManualAssignments] = useState<Record<string, number | null>>({})
 
-  // Load current config on mount
+  // Load current config and existing course cache on mount
   useEffect(() => {
     fetch('/api/config')
       .then(r => r.json())
       .then((d: { courseRoot?: string }) => {
         if (d?.courseRoot) {
           setCourseRoot(d.courseRoot)
+        }
+      })
+      .catch(() => {})
+
+    fetch('/api/course')
+      .then(r => r.json())
+      .then((d: { course?: ScanResult }) => {
+        if (d?.course && (d.course.days?.length > 0 || d.course.mentoring?.length > 0)) {
+          setScanResult(d.course)
         }
       })
       .catch(() => {})
@@ -100,8 +109,13 @@ export function ImportPage({ onImported }: { onImported: () => void }) {
     if (!scanResult) return
     setImporting(true)
     try {
-      // Save course metadata to IndexedDB
+      // Save course metadata to IndexedDB and server cache
       await saveCourseCache(scanResult)
+      await fetch('/api/course', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(scanResult),
+      }).catch(() => {})
 
       // Save manual assignments
       const assignments: ManualAssignment[] = Object.entries(manualAssignments).map(([itemId, dayNumber]) => ({
