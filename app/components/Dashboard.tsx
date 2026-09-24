@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { Check, Play, Clock3, BookOpen, Flame } from 'lucide-react'
 import { ProgressBar, Badge, Stat, LectureRow, formatTime } from './shared'
 import { useCourseData } from '@/hooks/useCourseData'
@@ -8,8 +9,8 @@ import { useHistory } from '@/hooks/useHistory'
 import { useSettings } from '@/hooks/useSettings'
 import type { CourseItem, LectureProgress } from '@/lib/types'
 
-function getGreeting(): string {
-  const h = new Date().getHours()
+function getGreeting(d: Date): string {
+  const h = d.getHours()
   if (h < 12) return 'Good morning'
   if (h < 17) return 'Good afternoon'
   return 'Good evening'
@@ -20,6 +21,12 @@ function formatDate(d = new Date()): string {
 }
 
 export function Dashboard({ onPlay, setPage }: { onPlay: (l: CourseItem) => void; setPage: (p: string) => void }) {
+  const [currentTime, setCurrentTime] = useState<Date | null>(null)
+
+  useEffect(() => {
+    setCurrentTime(new Date())
+  }, [])
+
   const { allLectures, course } = useCourseData()
   const { history } = useHistory(5)
   const { settings } = useSettings()
@@ -45,12 +52,12 @@ export function Dashboard({ onPlay, setPage }: { onPlay: (l: CourseItem) => void
 
   // Today's plan
   const target = settings.dailyLectureTarget
-  const completedToday = allProgress.filter(p => {
-    if (!p.completed || !p.lastWatched) return false
-    const d = new Date(p.lastWatched)
-    const now = new Date()
-    return d.toDateString() === now.toDateString()
-  }).length
+  const completedToday = currentTime
+    ? allProgress.filter(p => {
+        if (!p.completed || !p.lastWatched) return false
+        return new Date(p.lastWatched).toDateString() === currentTime.toDateString()
+      }).length
+    : 0
   const todayPlanLectures = buildTodayPlan(allLectures, progressMap, target)
 
   // Recent history items as CourseItem lookups
@@ -63,8 +70,8 @@ export function Dashboard({ onPlay, setPage }: { onPlay: (l: CourseItem) => void
     <div className="space-y-7">
       {/* Header */}
       <div>
-        <p className="mb-1 text-sm text-muted-foreground">{formatDate()}</p>
-        <h1 className="text-3xl font-semibold tracking-tight">{getGreeting()}, Essakki</h1>
+        <p className="mb-1 text-sm text-muted-foreground">{currentTime ? formatDate(currentTime) : 'Today'}</p>
+        <h1 className="text-3xl font-semibold tracking-tight">{currentTime ? getGreeting(currentTime) : 'Good morning'}, Essakki</h1>
       </div>
 
       {/* Stats Row */}
